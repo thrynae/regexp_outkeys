@@ -1,16 +1,17 @@
 {
-  "_schemaVersion": "1.0.0",
-  "regexp_outkeys":
-  {
-    "inputs":
-    [
-      {"name":"str",           "kind":"required", "type":["char","row"],
-      "purpose":"Char vector with the text to match"},
-      {"name":"expression",    "kind":"required", "type":["char","row"],
-      "purpose":"Regular expression"},
-      {"name":"outkey",        "kind":"required", "type":["char","row","choices={'match','split','start','end'}"],
-      "repeating":true,
-	  "purpose":"Output option"}
-    ]
-  }
+    "_schemaVersion": "1.0.0",
+    "_v_regexp_outkeys":"2.0.0",
+    "regexp_outkeys":
+    {
+        "inputs":
+        [
+            {"name":"str",           "kind":"required", "type":["char","row"],
+             "purpose":"Char vector with the text to match"},
+            {"name":"expression",    "kind":"required", "type":["char","row"],
+             "purpose":"Regular expression"},
+            {"name":"outkey",        "kind":"required", "type":["char","row","choices={'match','split','tokens','start','end'}"],
+             "repeating":true,
+             "purpose":"Output option"}
+        ]
+    }
 }

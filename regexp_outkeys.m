@@ -6,21 +6,21 @@ function varargout=regexp_outkeys(str,expression,varargin)
 % on any version of Matlab or GNU Octave.
 % On releases where these outkeys are available, the builtin is called.
 %
-%Syntax:
-% out=regexp_outkeys(str,expression,outkey);
-% [out1,...,outN]=regexp_outkeys(str,expression,outkey1,...,outkeyN);
-% [___,startIndex,endIndex]=regexp_outkeys(___);
+% Syntax:
+%   out = regexp_outkeys(str,expression,outkey);
+%   [out1,...,outN] = regexp_outkeys(str,expression,outkey1,...,outkeyN);
+%   [___,startIndex,endIndex] = regexp_outkeys(___);
 %
-%Example:
-% str='lorem1 ipsum1.2 dolor3 sit amet 99 ';
-% words=regexp_outkeys(str,' ','split')
-% numbers=regexp_outkeys(str,'[0-9.]*','match')
-% [white,end1,start,end2]=regexp_outkeys(str,' ','match','end')
+% Example:
+%  str = 'lorem1 ipsum1.2 dolor3 sit amet 99 ';
+%  words = regexp_outkeys(str,' ','split')
+%  numbers = regexp_outkeys(str,'[0-9.]*','match')
+%  [white,end1,start,end2] = regexp_outkeys(str,' ','match','end')
 %
 %/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%
 %|                                                                         |%
-%|  Version: 1.1.0                                                         |%
-%|  Date:    2021-10-20                                                    |%
+%|  Version: 2.0.0                                                         |%
+%|  Date:    2022-10-22                                                    |%
 %|  Author:  H.J. Wisselink                                                |%
 %|  Licence: CC by-nc-sa 4.0 ( creativecommons.org/licenses/by-nc-sa/4.0 ) |%
 %|  Email = 'h_j_wisselink*alumnus_utwente_nl';                            |%
@@ -31,17 +31,46 @@ function varargout=regexp_outkeys(str,expression,varargin)
 % Tested on several versions of Matlab (ML 6.5 and onward) and Octave (4.4.1 and onward), and on
 % multiple operating systems (Windows/Ubuntu/MacOS). For the full test matrix, see the HTML doc.
 % Compatibility considerations:
-% - Only the 'match', 'split', 'start', and 'end' options are supported. The additional options
-%   provided by regexp are also not implemented.
+% - Only the 'match', 'split', 'tokens', 'start', and 'end' options are supported. The additional
+%   options provided by regexp are not implemented.
 % - Cell array input is not supported.
+%
+% /=========================================================================================\
+% ||                     | Windows             | Linux               | MacOS               ||
+% ||---------------------------------------------------------------------------------------||
+% || Matlab R2022b       | W10: Pass           | Ubuntu 20.04: Pass  | Monterey: Pass      ||
+% || Matlab R2022a       | W10: Pass           |                     |                     ||
+% || Matlab R2021b       | W10: Pass           | Ubuntu 20.04: Pass  | Monterey: Pass      ||
+% || Matlab R2021a       | W10: Pass           |                     |                     ||
+% || Matlab R2020b       | W10: Pass           | Ubuntu 20.04: Pass  | Monterey: Pass      ||
+% || Matlab R2020a       | W10: Pass           |                     |                     ||
+% || Matlab R2019b       | W10: Pass           | Ubuntu 20.04: Pass  | Monterey: Pass      ||
+% || Matlab R2019a       | W10: Pass           |                     |                     ||
+% || Matlab R2018a       | W10: Pass           | Ubuntu 20.04: Pass  |                     ||
+% || Matlab R2017b       | W10: Pass           | Ubuntu 20.04: Pass  | Monterey: Pass      ||
+% || Matlab R2016b       | W10: Pass           | Ubuntu 20.04: Pass  | Monterey: Pass      ||
+% || Matlab R2015a       | W10: Pass           | Ubuntu 20.04: Pass  |                     ||
+% || Matlab R2013b       | W10: Pass           |                     |                     ||
+% || Matlab R2012a       |                     | Ubuntu 20.04: Pass  |                     ||
+% || Matlab R2011a       | W10: Pass           | Ubuntu 20.04: Pass  |                     ||
+% || Matlab R2010b       |                     | Ubuntu 20.04: Pass  |                     ||
+% || Matlab R2010a       | W7: Pass            |                     |                     ||
+% || Matlab R2007b       | W10: Pass           |                     |                     ||
+% || Matlab 7.1 (R14SP3) | XP: Pass            |                     |                     ||
+% || Matlab 6.5 (R13)    | W10: Pass           |                     |                     ||
+% || Octave 7.2.0        | W10: Pass           |                     |                     ||
+% || Octave 6.2.0        | W10: Pass           | Raspbian 11: Pass   | Catalina: Pass      ||
+% || Octave 5.2.0        | W10: Pass           | Ubuntu 20.04: Pass  |                     ||
+% || Octave 4.4.1        | W10: Pass           |                     | Catalina: Pass      ||
+% \=========================================================================================/
 
 if nargin<2
     error('HJW:regexp_outkeys:SyntaxError',...
         'No supported syntax used: at least 3 inputs expected.')
-    %As an undocumented feature this can also return s1,s2 without any outkeys specified.
+    % As an undocumented feature this can also return s1,s2 without any outkeys specified.
 end
 if ~(ischar(str) && ischar(expression))
-    %The extra parameters in varargin are checked inside the loop.
+    % The extra parameters in varargin are checked inside the loop.
     error('HJW:regexp_outkeys:InputError',...
         'All inputs must be char vectors.')
 end
@@ -52,37 +81,38 @@ end
 
 persistent legacy errorstr
 if isempty(legacy)
-    %The legacy struct contains the implemented options as field names. It is used in the error
-    %message.
-    %It is assumed that all Octave versions later than 4.0 support the expanded output, and all
-    %earlier versions do not, even if it is very likely most versions will support it.
-
-    %The switch to find matches was introduced in R14 (along with the 'tokenExtents', 'tokens' and
-    %'names' output switches).
+    % The legacy struct contains the implemented options as field names. It is used in the error
+    % message.
+    % It is assumed that all Octave versions later than 4.0 support the expanded output, and all
+    % earlier versions do not, even if it is very likely most versions will support it.
+    
+    % The switch to find matches was introduced in R14 (along with the 'tokenExtents', 'tokens'
+    % and 'names' output switches).
     legacy.match = ifversion('<','R14','Octave','<',4);
-
-    %The split option was introduced in R2007b.
+    legacy.tokens = legacy.match;
+    
+    % The split option was introduced in R2007b.
     legacy.split = ifversion('<','R2007b','Octave','<',4);
-
-    fn=fieldnames(legacy);
-    errorstr=['Extra regexp output type not implemented,',char(10),'only the following',...
+    
+    fn = fieldnames(legacy);
+    errorstr = ['Extra regexp output type not implemented,',char(10),'only the following',...
         ' types are implemented:',char(10),sprintf('%s, ',fn{:})]; %#ok<CHARTEN>
-    errorstr((end-1):end)='';%Remove trailing ', '
-
-    legacy.any = legacy.match || legacy.split;
+    errorstr((end-1):end) = ''; % Remove trailing ', '
+    
+    legacy.any = legacy.match || legacy.split || legacy.tokens;
 end
 
-if legacy.any || nargin==2
-    %Determine s1 and s2 only once for the legacy implementations.
-    [s1,s2]=regexp(str,expression);
+if legacy.any || nargin==2 || any(ismember(lower(varargin),{'start','end'}))
+    % Determine s1, s2, and TokenIndices only once for the legacy implementations.
+    [s1,s2,TokenIndices] = regexp(str,expression);
 end
 
 if nargin==2
-    varargout={s1,s2};return
+    varargout = {s1,s2,TokenIndices};return
 end
 
-%Pre-allocate output.
-varargout=cell(size(varargin));
+% Pre-allocate output.
+varargout = cell(size(varargin));
 for param=1:(nargin-2)
     if ~ischar(varargin{param})
         error('HJW:regexp_outkeys:InputError',...
@@ -91,38 +121,54 @@ for param=1:(nargin-2)
     switch lower(varargin{param})
         case 'match'
             if legacy.match
-                %Legacy implementation.
-                match=cell(1,numel(s1));
+                % Legacy implementation.
+                match = cell(1,numel(s1));
                 for n=1:numel(s1)
-                    match{n}=str(s1(n):s2(n));
+                    match{n} = str(s1(n):s2(n));
                 end
             else
-                [match,s1,s2]=regexp(str,expression,'match');
+                [match,s1,s2] = regexp(str,expression,'match');
             end
             varargout{param}=match;
         case 'split'
             if legacy.split
-                %Legacy implementation.
-                split=cell(1,numel(s1)+1);
-                start_index=[s1 numel(str)+1];
-                stop_index=[0 s2];
+                % Legacy implementation.
+                split = cell(1,numel(s1)+1);
+                start_index = [s1 numel(str)+1];
+                stop_index = [0 s2];
                 for n=1:numel(start_index)
-                    split{n}=str((stop_index(n)+1):(start_index(n)-1));
+                    split{n} = str((stop_index(n)+1):(start_index(n)-1));
                 end
             else
-                [split,s1,s2]= regexp(str,expression,'split');
+                [split,s1,s2] = regexp(str,expression,'split');
             end
             varargout{param}=split;
+        case 'tokens'
+            if legacy.tokens
+                % Legacy implementation.
+                tokens = cell(numel(TokenIndices),0);
+                for n=1:numel(TokenIndices)
+                    if numel(TokenIndices{n})~=2
+                        % No actual matches for the tokens.
+                        tokens{n} = cell(1,0);
+                    else
+                        tokens{n} = {str(TokenIndices{n}(1):TokenIndices{n}(2))};
+                    end
+                end
+            else
+                [tokens,s1,s2] = regexp(str,expression,'tokens');
+            end
+            varargout{param} = tokens;
         case 'start'
-            varargout{param}=s1;
+            varargout{param} = s1;
         case 'end'
-            varargout{param}=s2;
+            varargout{param} = s2;
         otherwise
             error('HJW:regexp_outkeys:NotImplemented',errorstr)
     end
 end
 if nargout>param
-    varargout(param+[1 2])={s1,s2};
+    varargout(param+[1 2]) = {s1,s2};
 end
 end
 function tf=ifversion(test,Rxxxxab,Oct_flag,Oct_test,Oct_ver)
@@ -132,18 +178,18 @@ function tf=ifversion(test,Rxxxxab,Oct_flag,Oct_test,Oct_ver)
 % name is used that is not in the dictionary.
 %
 % Syntax:
-% tf=ifversion(test,Rxxxxab)
-% tf=ifversion(test,Rxxxxab,'Octave',test_for_Octave,v_Octave)
+%   tf = ifversion(test,Rxxxxab)
+%   tf = ifversion(test,Rxxxxab,'Octave',test_for_Octave,v_Octave)
 %
-% Output:
-% tf       - If the current version satisfies the test this returns true.
-%            This works similar to verLessThan.
-%
-% Inputs:
-% Rxxxxab - Char array containing a release description (e.g. 'R13', 'R14SP2' or 'R2019a') or the
-%           numeric version.
-% test    - Char array containing a logical test. The interpretation of this is equivalent to
-%           eval([current test Rxxxxab]). For examples, see below.
+% Input/output arguments:
+% tf:
+%   If the current version satisfies the test this returns true. This works similar to verLessThan.
+% Rxxxxab:
+%   A char array containing a release description (e.g. 'R13', 'R14SP2' or 'R2019a') or the numeric
+%   version (e.g. 6.5, 7, or 9.6).
+% test:
+%   A char array containing a logical test. The interpretation of this is equivalent to
+%   eval([current test Rxxxxab]). For examples, see below.
 %
 % Examples:
 % ifversion('>=','R2009a') returns true when run on R2009a or later
@@ -159,8 +205,8 @@ function tf=ifversion(test,Rxxxxab,Oct_flag,Oct_test,Oct_ver)
 %
 %/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%
 %|                                                                         |%
-%|  Version: 1.1.0                                                         |%
-%|  Date:    2021-09-26                                                    |%
+%|  Version: 1.1.2                                                         |%
+%|  Date:    2022-09-16                                                    |%
 %|  Author:  H.J. Wisselink                                                |%
 %|  Licence: CC by-nc-sa 4.0 ( creativecommons.org/licenses/by-nc-sa/4.0 ) |%
 %|  Email = 'h_j_wisselink*alumnus_utwente_nl';                            |%
@@ -173,24 +219,22 @@ function tf=ifversion(test,Rxxxxab,Oct_flag,Oct_test,Oct_ver)
 % Compatibility considerations:
 % - This is expected to work on all releases.
 
-%The decimal of the version numbers are padded with a 0 to make sure v7.10 is larger than v7.9.
-%This does mean that any numeric version input needs to be adapted. multiply by 100 and round to
-%remove the potential for float rounding errors.
-%Store in persistent for fast recall (don't use getpref, as that is slower than generating the
-%variables and makes updating this function harder).
+% The decimal of the version numbers are padded with a 0 to make sure v7.10 is larger than v7.9.
+% This does mean that any numeric version input needs to be adapted. multiply by 100 and round to
+% remove the potential for float rounding errors.
+% Store in persistent for fast recall (don't use getpref, as that is slower than generating the
+% variables and makes updating this function harder).
 persistent  v_num v_dict octave
 if isempty(v_num)
-    %test if Octave is used instead of Matlab
-    octave=exist('OCTAVE_VERSION', 'builtin');
+    % Test if Octave is used instead of Matlab.
+    octave = exist('OCTAVE_VERSION', 'builtin');
     
-    %get current version number
-    v_num=version;
-    ii=strfind(v_num,'.');if numel(ii)~=1,v_num(ii(2):end)='';ii=ii(1);end
-    v_num=[str2double(v_num(1:(ii-1))) str2double(v_num((ii+1):end))];
-    v_num=v_num(1)+v_num(2)/100;v_num=round(100*v_num);
+    % Get current version number. This code was suggested by Jan on this thread:
+    % https://mathworks.com/matlabcentral/answers/1671199#comment_2040389
+    v_num = [100, 1] * sscanf(version, '%d.%d', 2);
     
-    %get dictionary to use for ismember
-    v_dict={...
+    % Get dictionary to use for ismember.
+    v_dict = {...
         'R13' 605;'R13SP1' 605;'R13SP2' 605;'R14' 700;'R14SP1' 700;'R14SP2' 700;
         'R14SP3' 701;'R2006a' 702;'R2006b' 703;'R2007a' 704;'R2007b' 705;
         'R2008a' 706;'R2008b' 707;'R2009a' 708;'R2009b' 709;'R2010a' 710;
@@ -198,7 +242,7 @@ if isempty(v_num)
         'R2013a' 801;'R2013b' 802;'R2014a' 803;'R2014b' 804;'R2015a' 805;
         'R2015b' 806;'R2016a' 900;'R2016b' 901;'R2017a' 902;'R2017b' 903;
         'R2018a' 904;'R2018b' 905;'R2019a' 906;'R2019b' 907;'R2020a' 908;
-        'R2020b' 909;'R2021a' 910;'R2021b' 911};
+        'R2020b' 909;'R2021a' 910;'R2021b' 911;'R2022a' 912;'R2022b' 913};
 end
 
 if octave
@@ -207,47 +251,48 @@ if octave
             ['No version test for Octave was provided.',char(10),...
             'This function might return an unexpected outcome.']) %#ok<CHARTEN>
         if isnumeric(Rxxxxab)
-            v=0.1*Rxxxxab+0.9*fix(Rxxxxab);v=round(100*v);
+            v = 0.1*Rxxxxab+0.9*fix(Rxxxxab);v = round(100*v);
         else
-            L=ismember(v_dict(:,1),Rxxxxab);
+            L = ismember(v_dict(:,1),Rxxxxab);
             if sum(L)~=1
                 warning('HJW:ifversion:NotInDict',...
                     'The requested version is not in the hard-coded list.')
-                tf=NaN;return
+                tf = NaN;return
             else
-                v=v_dict{L,2};
+                v = v_dict{L,2};
             end
         end
     elseif nargin==4
         % Undocumented shorthand syntax: skip the 'Octave' argument.
-        [test,v]=deal(Oct_flag,Oct_test);
+        [test,v] = deal(Oct_flag,Oct_test);
         % Convert 4.1 to 401.
-        v=0.1*v+0.9*fix(v);v=round(100*v);
+        v = 0.1*v+0.9*fix(v);v = round(100*v);
     else
-        [test,v]=deal(Oct_test,Oct_ver);
+        [test,v] = deal(Oct_test,Oct_ver);
         % Convert 4.1 to 401.
-        v=0.1*v+0.9*fix(v);v=round(100*v);
+        v = 0.1*v+0.9*fix(v);v = round(100*v);
     end
 else
     % Convert R notation to numeric and convert 9.1 to 901.
     if isnumeric(Rxxxxab)
-        v=0.1*Rxxxxab+0.9*fix(Rxxxxab);v=round(100*v);
+        v = 0.1*Rxxxxab+0.9*fix(Rxxxxab);v = round(100*v);
     else
-        L=ismember(v_dict(:,1),Rxxxxab);
+        L = ismember(v_dict(:,1),Rxxxxab);
         if sum(L)~=1
             warning('HJW:ifversion:NotInDict',...
                 'The requested version is not in the hard-coded list.')
-            tf=NaN;return
+            tf = NaN;return
         else
-            v=v_dict{L,2};
+            v = v_dict{L,2};
         end
     end
 end
 switch test
-    case '==', tf= v_num == v;
-    case '<' , tf= v_num <  v;
-    case '<=', tf= v_num <= v;
-    case '>' , tf= v_num >  v;
-    case '>=', tf= v_num >= v;
+    case '==', tf = v_num == v;
+    case '<' , tf = v_num <  v;
+    case '<=', tf = v_num <= v;
+    case '>' , tf = v_num >  v;
+    case '>=', tf = v_num >= v;
 end
 end
+
